@@ -27,10 +27,14 @@ get_tmux_option() {
 }
 
 main() {
-  local colors fg bg
+  local fg bg current_status worktree_segment
   IFS=' ' read -r fg bg <<< "$(get_tmux_option "@worktree-colors" "#282a36 #50fa7b")"
 
-  tmux set-option -ga status-right "#[fg=${fg},bg=${bg}]#($CURRENT_DIR/scripts/worktree.sh) "
+  worktree_segment="#[fg=${fg},bg=${bg}]#($CURRENT_DIR/scripts/worktree.sh) "
+  current_status=$(tmux show-option -gqv status-right)
+
+  # Prepend so the worktree label appears first (leftmost) in status-right
+  tmux set-option -g status-right "${worktree_segment}${current_status}"
 }
 
 main
