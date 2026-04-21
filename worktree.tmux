@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 # tmux-worktree: displays the current worktree/task name in the tmux status bar.
 #
-# Reads from /tmp/.tmux-worktree-<session_name>, which is written by
-# tmuxinator on_project_start (or any other session bootstrapper).
+# Uses a tmux session option (@worktree-name) for instant rendering —
+# no shell script, no file I/O, no status-interval dependency.
 #
-# Usage in .tmux.conf:
-#   set -g @plugin 'aross/tmux-worktree'
+# Set the worktree name on a session:
+#   tmux set-option -t <session> @worktree-name "my-feature"
+#
+# Clear it:
+#   tmux set-option -t <session> -u @worktree-name
 #
 # Options:
 #   @worktree-colors "fg bg"   (default: "#282a36 #50fa7b" — dark on green, Dracula palette)
 #   @worktree-icon "🌿"        (default: 🌿)
-
-CURRENT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-source "$CURRENT_DIR/scripts/helpers.sh"
 
 get_tmux_option() {
   local option="$1"
@@ -27,10 +27,13 @@ get_tmux_option() {
 }
 
 main() {
-  local fg bg current_status worktree_segment
+  local fg bg icon current_status worktree_segment
   IFS=' ' read -r fg bg <<< "$(get_tmux_option "@worktree-colors" "#282a36 #50fa7b")"
+  icon=$(get_tmux_option "@worktree-icon" "🌿")
 
-  worktree_segment="#[fg=${fg},bg=${bg}]#($CURRENT_DIR/scripts/worktree.sh) "
+  # #{?@worktree-name,...,} is a tmux conditional format:
+  # if @worktree-name is set on the session, render the segment; otherwise render nothing.
+  worktree_segment="#{?@worktree-name,#[fg=${fg}#,bg=${bg}] ${icon} #{@worktree-name} ,}"
   current_status=$(tmux show-option -gqv status-right)
 
   # Prepend so the worktree label appears first (leftmost) in status-right
